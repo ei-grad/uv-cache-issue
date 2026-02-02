@@ -14,6 +14,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          prune-cache: false
 
       - name: Show cache directory before sync
         run: |
@@ -23,8 +24,6 @@ jobs:
           du -sh "$UV_CACHE_DIR"/* 2>/dev/null || true
           echo "=== wheels-v5 contents ==="
           find "$UV_CACHE_DIR/wheels-v5" -type f 2>/dev/null | head -20 || true
-          echo "=== archive-v0 contents ==="
-          find "$UV_CACHE_DIR/archive-v0" -type f 2>/dev/null | head -20 || true
 
       - name: Sync dependencies
         run: uv sync
