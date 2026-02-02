@@ -15,8 +15,19 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Show cache directory before sync
+        run: |
+          echo "UV_CACHE_DIR=$UV_CACHE_DIR"
+          du -sh "$UV_CACHE_DIR" 2>/dev/null || echo "Cache dir does not exist"
+          ls -la "$UV_CACHE_DIR" 2>/dev/null || true
+
       - name: Sync dependencies
         run: uv sync
+
+      - name: Show cache directory after sync
+        run: |
+          du -sh "$UV_CACHE_DIR"
+          ls -la "$UV_CACHE_DIR"
 
       - name: Run test
         run: uv run python -c "import requests, pandas, numpy; print('OK')"
