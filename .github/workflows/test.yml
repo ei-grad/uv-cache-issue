@@ -34,7 +34,6 @@ jobs:
         with:
           enable-cache: true
           prune-cache: false
-          cache-python: true
           cache-suffix: without-prune
 
       - name: Sync dependencies

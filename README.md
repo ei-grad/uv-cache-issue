@@ -1,19 +1,58 @@
 # setup-uv cache effectiveness issue
 
-Reproduction repository demonstrating that the default `setup-uv` cache configuration still downloads packages from PyPI on every run.
+Reproduction repository demonstrating that the default `setup-uv` cache configuration still downloads packages from PyPI on every cached run.
 
 ## Problem
 
-With default settings (`enable-cache: true`), the GitHub Actions cache shows "Cache hit" and restores ~434MB, but `uv sync` still downloads all packages from PyPI.
+With default settings (`enable-cache: true`), GitHub Actions shows "Cache hit" and restores ~434MB, but `uv sync` still downloads all packages from PyPI.
 
 ## Root Cause
 
-The default `prune-cache: true` removes **pre-built wheels** before saving the cache, keeping only source distributions. This means:
+The default `prune-cache: true` removes **pre-built wheels** before saving the cache, keeping only source distributions. From [setup-uv docs](https://github.com/astral-sh/setup-uv/blob/main/docs/caching.md):
 
-1. First run: Downloads wheels, saves sdists to cache
+> "the uv cache is pruned after every run, removing pre-built wheels, but retaining any wheels that were built from source"
+
+This means:
+1. First run: Downloads wheels, saves only sdists to cache
 2. Second run: Cache hit, but wheels were pruned → downloads wheels again
 
-Additionally, `cache-python` is `false` by default, so Python toolchain (~35MB) is downloaded every run.
+## Evidence
+
+### With `prune-cache: true` (default)
+
+```
+Cache hit for: setup-uv-1-...-with-prune
+Cache Size: ~434 MB (455338011 B)
+
+Downloading cpython-3.14.2-linux-x86_64-gnu (download) (34.4MiB)
+Downloading numpy (15.8MiB)
+Downloading pandas (10.4MiB)
+ Downloaded numpy
+ Downloaded pandas
+Prepared 15 packages in 794ms
+Installed 15 packages in 38ms
+```
+
+Cache hit, but numpy (15.8MB) and pandas (10.4MB) are downloaded from PyPI.
+
+### With `prune-cache: false`
+
+```
+Cache hit for: setup-uv-1-...-without-prune
+Cache Size: ~1758 MB (1843537026 B)
+
+Downloading cpython-3.14.2-linux-x86_64-gnu (download) (34.4MiB)
+Installed 15 packages in 74ms
+```
+
+Cache hit, packages installed directly from cache. Only Python toolchain downloaded (not cached by setup-uv).
+
+## Comparison
+
+| Setting | Cache Size | Package Downloads | Time |
+|---------|-----------|-------------------|------|
+| `prune-cache: true` (default) | 434 MB | numpy, pandas, etc. | ~800ms prepare |
+| `prune-cache: false` | 1758 MB | None (only Python) | 74ms install |
 
 ## Fix
 
@@ -21,28 +60,17 @@ Additionally, `cache-python` is `false` by default, so Python toolchain (~35MB) 
 - uses: astral-sh/setup-uv@v5
   with:
     enable-cache: true
-    prune-cache: false      # Keep pre-built wheels
-    cache-python: true      # Cache Python installations
+    prune-cache: false      # Keep pre-built wheels in cache
 ```
-
-## Evidence
-
-| Configuration | Cache Size | Package Downloads |
-|--------------|------------|-------------------|
-| Default (`prune-cache: true`) | ~434MB | Every run |
-| `prune-cache: false` | ~1.7GB | Only first run |
-
-See [workflow runs](../../actions) for detailed logs.
-
-## Reproduction
-
-1. Run workflow with default settings
-2. Second run shows "Cache hit" but still downloads packages
-3. Set `prune-cache: false`, bust cache (change deps)
-4. Second run no longer downloads packages
 
 ## Issue
 
-The default behavior is documented but surprising. Most users expect cached runs to avoid downloads. Consider:
+The default behavior (`prune-cache: true`) is documented but surprising:
+- Users expect cached runs to avoid downloads
+- The cache shows "hit" but downloads happen anyway
+- 434MB of cache provides no benefit for pre-built wheels
+
+Consider:
 - Changing default to `prune-cache: false`
-- Or adding a warning when cache hit + downloads detected
+- Or documenting this trade-off more prominently
+- Or showing a warning when cache hit occurs but downloads are still needed
