@@ -16,7 +16,7 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-        run: uv sync -v
+        run: uv sync
 
       - name: Run test
         run: uv run python -c "import requests, pandas, numpy; print('OK')"
