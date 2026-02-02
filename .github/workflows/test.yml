@@ -5,7 +5,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  with-prune:
+    name: "prune-cache: true (default)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: with-prune
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run test
+        run: uv run python -c "import requests, pandas, numpy; print('OK')"
+
+  without-prune:
+    name: "prune-cache: false"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,25 +34,11 @@ jobs:
         with:
           enable-cache: true
           prune-cache: false
-
-      - name: Show cache directory before sync
-        run: |
-          echo "=== UV_CACHE_DIR=$UV_CACHE_DIR ==="
-          du -sh "$UV_CACHE_DIR" 2>/dev/null || echo "Cache dir does not exist"
-          echo "=== Subdirectory sizes ==="
-          du -sh "$UV_CACHE_DIR"/* 2>/dev/null || true
-          echo "=== wheels-v5 contents ==="
-          find "$UV_CACHE_DIR/wheels-v5" -type f 2>/dev/null | head -20 || true
+          cache-python: true
+          cache-suffix: without-prune
 
       - name: Sync dependencies
         run: uv sync
-
-      - name: Show cache directory after sync
-        run: |
-          echo "=== After sync ==="
-          du -sh "$UV_CACHE_DIR"/*
-          echo "=== wheels-v5 contents ==="
-          find "$UV_CACHE_DIR/wheels-v5" -type f | head -20
 
       - name: Run test
         run: uv run python -c "import requests, pandas, numpy; print('OK')"

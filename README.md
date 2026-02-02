@@ -1,30 +1,48 @@
-# uv-cache-issue
+# setup-uv cache effectiveness issue
 
-Reproduction repository for an issue with the official `astral-sh/setup-uv` GitHub Action caching.
+Reproduction repository demonstrating that the default `setup-uv` cache configuration still downloads packages from PyPI on every run.
 
 ## Problem
 
-Even when the cache is hit (shows "Cache restored"), `uv sync` still downloads every package from PyPI on each run.
+With default settings (`enable-cache: true`), the GitHub Actions cache shows "Cache hit" and restores ~434MB, but `uv sync` still downloads all packages from PyPI.
 
-## Expected Behavior
+## Root Cause
 
-When cache is restored, packages should be served from the cache without downloading from PyPI.
+The default `prune-cache: true` removes **pre-built wheels** before saving the cache, keeping only source distributions. This means:
 
-## Actual Behavior
+1. First run: Downloads wheels, saves sdists to cache
+2. Second run: Cache hit, but wheels were pruned → downloads wheels again
 
-Every `uv sync` run downloads all packages from PyPI, even with a cache hit.
+Additionally, `cache-python` is `false` by default, so Python toolchain (~35MB) is downloaded every run.
 
-## To Reproduce
+## Fix
 
-1. Run the workflow once to populate cache
-2. Run it again (manually via workflow_dispatch or push a change)
-3. Observe that despite "Cache restored" message, all packages are downloaded again
+```yaml
+- uses: astral-sh/setup-uv@v5
+  with:
+    enable-cache: true
+    prune-cache: false      # Keep pre-built wheels
+    cache-python: true      # Cache Python installations
+```
 
-## Dependencies
+## Evidence
 
-- requests
-- pandas
-- numpy
-- pyspark
+| Configuration | Cache Size | Package Downloads |
+|--------------|------------|-------------------|
+| Default (`prune-cache: true`) | ~434MB | Every run |
+| `prune-cache: false` | ~1.7GB | Only first run |
 
-These packages were chosen to make download times visible.
+See [workflow runs](../../actions) for detailed logs.
+
+## Reproduction
+
+1. Run workflow with default settings
+2. Second run shows "Cache hit" but still downloads packages
+3. Set `prune-cache: false`, bust cache (change deps)
+4. Second run no longer downloads packages
+
+## Issue
+
+The default behavior is documented but surprising. Most users expect cached runs to avoid downloads. Consider:
+- Changing default to `prune-cache: false`
+- Or adding a warning when cache hit + downloads detected
