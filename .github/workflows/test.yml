@@ -17,17 +17,24 @@ jobs:
 
       - name: Show cache directory before sync
         run: |
-          echo "UV_CACHE_DIR=$UV_CACHE_DIR"
+          echo "=== UV_CACHE_DIR=$UV_CACHE_DIR ==="
           du -sh "$UV_CACHE_DIR" 2>/dev/null || echo "Cache dir does not exist"
-          ls -la "$UV_CACHE_DIR" 2>/dev/null || true
+          echo "=== Subdirectory sizes ==="
+          du -sh "$UV_CACHE_DIR"/* 2>/dev/null || true
+          echo "=== wheels-v5 contents ==="
+          find "$UV_CACHE_DIR/wheels-v5" -type f 2>/dev/null | head -20 || true
+          echo "=== archive-v0 contents ==="
+          find "$UV_CACHE_DIR/archive-v0" -type f 2>/dev/null | head -20 || true
 
       - name: Sync dependencies
         run: uv sync
 
       - name: Show cache directory after sync
         run: |
-          du -sh "$UV_CACHE_DIR"
-          ls -la "$UV_CACHE_DIR"
+          echo "=== After sync ==="
+          du -sh "$UV_CACHE_DIR"/*
+          echo "=== wheels-v5 contents ==="
+          find "$UV_CACHE_DIR/wheels-v5" -type f | head -20
 
       - name: Run test
         run: uv run python -c "import requests, pandas, numpy; print('OK')"
