@@ -18,7 +18,9 @@ This means:
 
 ## Evidence
 
-### With `prune-cache: true` (default)
+From [workflow run #21582182179](https://github.com/ei-grad/uv-cache-issue/actions/runs/21582182179) (second run with cache hit):
+
+### With `prune-cache: true` (default) — [job log](https://github.com/ei-grad/uv-cache-issue/actions/runs/21582182179/job/62181694686)
 
 ```
 Cache hit for: setup-uv-1-...-with-prune
@@ -35,7 +37,7 @@ Installed 15 packages in 38ms
 
 Cache hit, but numpy (15.8MB) and pandas (10.4MB) are downloaded from PyPI.
 
-### With `prune-cache: false`
+### With `prune-cache: false` — [job log](https://github.com/ei-grad/uv-cache-issue/actions/runs/21582182179/job/62181694727)
 
 ```
 Cache hit for: setup-uv-1-...-without-prune
